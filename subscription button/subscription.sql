@@ -1,12 +1,5 @@
 /**
  * Need a table called SA_SUBSCRIPTION with two fields (APP_USER, EVENT)
- * Also add two css classes
- * .activated {
- *   color: red;
- * }
- * .inactive {
- *   color: black;
- * } 
  */
 
 declare
@@ -14,47 +7,47 @@ declare
     table of SA_SUBSCRIPTION.EVENT%type;
   L_EVENTS    T_EVENTS_TAB;
   L_EVENT     SA_SUBSCRIPTION.EVENT%type;
-  K_ACTIVATED constant varchar2(16) := 'activated';
-  K_INACTIVE  constant varchar2(16) := 'inactive';
+  K_ACTIVE constant boolean := true;
+  K_INACTIVE  constant boolean := false;
 begin
+
+  -- Open JSON Object
   APEX_JSON.OPEN_OBJECT;
 
-  -- Process Button click or Page Load
+  -- New Object for Button Settings. Adapt to your needs
+  APEX_JSON.OPEN_OBJECT('settings');
+    APEX_JSON.write('active_text', 'Unsubscribe from this event');
+    APEX_JSON.write('inactive_text', 'Subscribe to this event');
+    APEX_JSON.write('active_color', '#bb0a30');
+    APEX_JSON.write('inactive_color', '#000000');
+  APEX_JSON.CLOSE_OBJECT;
+
+  -- New Object for the events
+  APEX_JSON.OPEN_OBJECT('events');
+
+  -- Process Button click
   if APEX_APPLICATION.G_X01 is not null then
     -- Button was clicked
-    begin
-      select EVENT 
-        into L_EVENT
-        from SA_SUBSCRIPTION
-       where APP_USER = :APP_USER
-         and EVENT = APEX_APPLICATION.G_X01;
-      
-      -- Record was found. Delete it for unsubscription
       delete SA_SUBSCRIPTION
        where APP_USER = :APP_USER
          and EVENT = APEX_APPLICATION.G_X01;
 
-      APEX_JSON.WRITE(APEX_APPLICATION.G_X01, K_INACTIVE);
-    
-    exception
-      -- If no record was found set subscription for event
-      when NO_DATA_FOUND then
-        insert into SA_SUBSCRIPTION (
-          APP_USER
-        , EVENT
-        ) values (
-          :APP_USER
-        , APEX_APPLICATION.G_X01
-        );
-        APEX_JSON.WRITE(APEX_APPLICATION.G_X01, K_ACTIVATED);
-    end;
+      if sql%ROWCOUNT = 0 then
+        -- No reocrd was found. Insert new record
+        insert into SA_SUBSCRIPTION (APP_USER, EVENT) 
+          values (:APP_USER, APEX_APPLICATION.G_X01);
+        APEX_JSON.write(APEX_APPLICATION.G_X01, K_ACTIVE);
+      else
+        -- Record was deleted 
+        APEX_JSON.write(APEX_APPLICATION.G_X01, K_INACTIVE);
+      end if;
   
   end if;
   
-  --Check status of buttons
-  if APEX_APPLICATION.G_F01.COUNT > 0 then
+  -- Process for all Buttons on Page Load
+  if APEX_APPLICATION.G_F01.count > 0 then
 
-    -- Load user settings for events from array into new array
+    -- Load user settings for events into new array. Doesn't take care of events from APEX_APPLICATION.G_F01 :(
     select EVENT
       bulk collect
       into L_EVENTS
@@ -62,20 +55,20 @@ begin
      where APP_USER = :APP_USER;
 
     -- Loop input array and check against new array
-    for I in 1..APEX_APPLICATION.G_F01.COUNT loop
+    for i in 1..APEX_APPLICATION.G_F01.count loop
     
       -- Active because element of new array
-      if APEX_APPLICATION.G_F01(I) member of L_EVENTS then
-        APEX_JSON.WRITE(APEX_APPLICATION.G_F01(I), K_ACTIVATED);
+      if APEX_APPLICATION.G_F01(i) member of L_EVENTS then
+        APEX_JSON.write(APEX_APPLICATION.G_F01(i), K_ACTIVE);
       
       -- Inactive because not an element of array
       else
-        APEX_JSON.WRITE(APEX_APPLICATION.G_F01(I), K_INACTIVE);
+        APEX_JSON.write(APEX_APPLICATION.G_F01(i), K_INACTIVE);
       end if;
       
     end loop;
 
   end if;
 
-  APEX_JSON.CLOSE_OBJECT;
+  APEX_JSON.CLOSE_ALL;
 end;

@@ -22,13 +22,15 @@ function subscription(pX01) {
     }, {
         success: function (data) {
             // loop json object and set class
-            for (const [key, value] of Object.entries(data)) {
-                //console.log(`${key}: ${value}`);
-                //var button = $('[data-event="' + key + '"] span');
-                //button.removeClass('inactive activated');
-                $('[data-event="' + key + '"] span').removeClass('inactive activated').addClass(value);
-                //$('[data-event="' + key + '"] span').addClass(value);
-                $('[data-event="' + key + '"]').prop('title', 'Subscription ' + value);
+            for (const [key, value] of Object.entries(data.events)) {
+                if (value === true) {
+                    $('[data-event="' + key + '"] span').css('color', data.settings.active_color);
+                    $('[data-event="' + key + '"]').prop('title', data.settings.active_text);
+                } else {
+                    $('[data-event="' + key + '"] span').css('color', data.settings.inactive_color);
+                    $('[data-event="' + key + '"]').prop('title', data.settings.inactive_text);
+                }
+
             }
         }
     });
