@@ -1,7 +1,3 @@
-/**
- * Need a table called SA_SUBSCRIPTION with two fields (APP_USER, EVENT)
- */
-
 declare
   type T_EVENTS_TAB is
     table of SA_SUBSCRIPTION.EVENT%type;
@@ -18,7 +14,7 @@ begin
   APEX_JSON.OPEN_OBJECT('settings');
     APEX_JSON.write('active_text', 'Unsubscribe from this event');
     APEX_JSON.write('inactive_text', 'Subscribe to this event');
-    APEX_JSON.write('active_color', '#bb0a30');
+    APEX_JSON.write('active_color', '#f50537');
     APEX_JSON.write('inactive_color', '#000000');
   APEX_JSON.CLOSE_OBJECT;
 
@@ -71,4 +67,15 @@ begin
   end if;
 
   APEX_JSON.CLOSE_ALL;
+  
+exception 
+  when others then
+    APEX_JSON.INITIALIZE_OUTPUT;
+    APEX_JSON.OPEN_OBJECT;
+    if APEX_APPLICATION.g_debug then
+      APEX_JSON.WRITE('error', 'Error while processing subscription.<br><i>'   || sqlerrm || '</i>');
+    else
+      APEX_JSON.WRITE('error', 'Error while processing subscription');
+    end if;
+    APEX_JSON.CLOSE_OBJECT;    
 end;
